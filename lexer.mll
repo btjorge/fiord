@@ -17,28 +17,31 @@
 
 {
   open Parser
+  open Language
 
   exception End_of_input
 
-  let choose (gctx, (cl, fl, rl)) id =
-    if List.mem id cl then
-      CONST id
-    else if List.mem id (List.map fst fl) then
-      FUNC id
-    else if List.mem id (List.map fst rl) then
-      REL id
-    else if List.mem id (List.map fst gctx) then
-      FVAR id  (* pas vraiment plaisant de lexer à partir du contexte *)
-    else       (* (si y avait que le language, j'dit pas, mais les formules! *)
-      IDENT id
+  let choose default lang (id : string) =
+    match Language.get_type lang id with
+    | None -> default id
+    | Some st ->
+       match st with
+       | Constant -> CONST id
+       | Function (Prefix _) -> FUNC id
+       | Function Infix -> BINOP id
+       | Relation (Prefix _) -> REL id
+       | Relation Infix -> BINREL id
 }
 
 let lower = [ 'a' - 'z' ]
 let upper = [ 'A' - 'Z' ]
 let digit = [ '0' - '9' ]
+let other = [ '+' '-' '*' '/' '^' '@' '$' '|' '&' '!' '?' '~' '<' '>' '=']
 
-let ident = (lower | upper) (lower | upper | digit | '_') *
+let ident = lower (lower | upper | digit | '_') *
+let upper_ident = upper (lower | upper | digit | '_') * (* nom ? *)
 let number = digit +
+let symbol = (lower | upper | digit | other | '_') +
 
 rule token lang = parse
 | [ ' ' '\t' '\n' '\r' ] { token lang lexbuf }
@@ -54,23 +57,28 @@ rule token lang = parse
 | ','                    { COMMA }
 | '('                    { LPAREN }
 | ')'                    { RPAREN }
-| '{'                    { RBRACE }
-| '}'                    { LBRACE }
+| '{'                    { LBRACE }
+| '}'                    { RBRACE }
 | ':'                    { COLON }
 | '.'                    { DOT }
 | ":="                   { DEFINED }
+| "infix"                { INFIX }
 | "Language"             { LANGUAGE }
 | "Axiom"                { AXIOM }
 | "Theorem"              { THEOREM }
 | "Proof"                { PROOF }
 | "Qed"                  { QED }
-| ident as id            { choose lang id }
-| number as num          { NUMBER (int_of_string num) }
+| ident as id            { choose (fun x -> IDENT x) lang id }
+| upper_ident as id      { choose (fun x -> UPPIDENT x) lang id }
+| number as num          { choose (fun x -> NUMBER x) lang num }
+| number as num "%int"   { NUMBER num }
+| symbol as symb         { choose (fun x -> SYMBOL x) lang symb }
 | eof                    { raise End_of_input }
 | _ as c                 { print_string "unexpected char: ";
                            print_char c;
                            print_newline ();
                            exit 1 }
+
 
 and comment lang n = parse
 | "(*"  { comment lang (n + 1) lexbuf }

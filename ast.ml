@@ -15,9 +15,13 @@
 (*                                                                            *)
 (******************************************************************************)
 
+open Language (* ? *)
+
 type ident = string
 
-type decl = ident * int
+type func_decl = ident * s_type
+
+type rel_decl = ident * s_type
 
 type term = Const of ident
           | Var of ident
@@ -37,12 +41,13 @@ type formula = False
              | Exists of ident list * formula
 
 type argument = Ident of ident
+              | UppIdent of ident
               | Term of term
               | Formula of formula
 
 type tactic = ident * argument list
 
-type command = Language of ident list * decl list * decl list
+type command = Language of ident list * func_decl list * rel_decl list
              | Axiom of ident * formula
              | Theorem of ident * formula
              | Proof

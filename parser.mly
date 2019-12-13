@@ -17,6 +17,7 @@
 
 %{
     open Ast
+    open Language
 %}
 
 /*%token EOF*/
@@ -30,16 +31,22 @@
 %token COLON
 %token DOT
 %token DEFINED
+%token INFIX
 %token LANGUAGE AXIOM THEOREM PROOF QED
-%token <string> CONST FUNC REL FVAR
+%token <string> BINOP BINREL
+%token <string> CONST FUNC REL
 %token <string> IDENT
-%token <int> NUMBER
+%token <string> UPPIDENT
+%token <string> NUMBER /* oui, c'est un peu bizarre */
+%token <string> SYMBOL
 
 %nonassoc COMMA /* pour les quantificateurs */
 %right ARROW
 %left AND
 %left OR
 %nonassoc NOT
+
+%left BINOP
 
 %start <Ast.command> sentence
 
@@ -52,22 +59,30 @@ sentence:
 | c = command DOT  { c }
 
 command: /* nom ??? */
-| LANGUAGE COLON RBRACE consts = separated_list (COMMA, IDENT) LBRACE
-                 RBRACE funcs = separated_list (COMMA, decl) LBRACE
-                 RBRACE rels = separated_list (COMMA, decl) LBRACE
+| LANGUAGE COLON LBRACE consts = separated_list (COMMA, symbol) RBRACE
+                 LBRACE funcs = separated_list (COMMA, decl) RBRACE
+                 LBRACE rels = separated_list (COMMA, decl) RBRACE
   { Language (consts, funcs, rels) }
-| AXIOM id = IDENT DEFINED f = formula  { Axiom (id, f) }
-| THEOREM id = IDENT DEFINED f = formula  { Theorem(id, f) }
+| AXIOM id = UPPIDENT DEFINED f = formula  { Axiom (id, f) }
+| THEOREM id = UPPIDENT DEFINED f = formula  { Theorem (id, f) }
 | PROOF  { Proof }
 | QED    { Qed }
 | id = IDENT args = list (argument)   { Tactic (id, args) }
 
+%inline symbol:
+| id = IDENT  { id }
+| id = UPPIDENT  { id }
+| n = NUMBER  { n }
+| s = SYMBOL  { s }
+
+(* pour l'instant *)
 decl:
-| id = IDENT COLON num = NUMBER  { (id, num) }
+| symb = SYMBOL COLON num = NUMBER  { (symb, Prefix (int_of_string num)) }
+| symb = SYMBOL COLON INFIX       { (symb, Infix) }
 
 argument:
 | id = IDENT  { Ident id }
-| fv = FVAR  { Formula (FVar fv) }
+| id = UPPIDENT  { UppIdent id  }
 | LPAREN id = IDENT RPAREN  { Ident id }
 | LPAREN t = not_id_term RPAREN  { Term t }
 | LPAREN f = formula RPAREN { Formula f }
@@ -75,7 +90,7 @@ argument:
 formula:
 | FALSE  { False }
 | a = atomic  { Atomic a }
-| fv = FVAR { FVar fv }
+| id = UPPIDENT { FVar id }
 | LPAREN f = formula RPAREN  { f }
 | NOT f = formula  { Not f }
 | f = formula AND g = formula  { And (f, g) }
@@ -86,10 +101,12 @@ formula:
 
 atomic:
 | t1 = term EQUAL t2 = term  { Equal (t1, t2) }
+| t1 = term r = BINREL t2 = term  { Rel (r, [t1; t2]) }
 | r = REL args = nonempty_list(atomic_term)  { Rel (r, args) }
 
 term:
 | st = atomic_term  { st }
+| t1 = term op = BINOP t2 = term  { Func (op, [t1; t2]) }
 | func = FUNC args = nonempty_list (atomic_term)  { Func (func, args) }
 
 not_id_term:
@@ -100,5 +117,3 @@ atomic_term: /* nom nul ! */
 | c = CONST  { Const c }
 | id = IDENT  { Var id }
 | LPAREN t = term RPAREN  { t }
-
-

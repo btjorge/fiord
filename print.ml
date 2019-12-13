@@ -16,6 +16,7 @@
 (******************************************************************************)
 
 open Ast
+open Language
 
 let print_ident fmt id = Format.fprintf fmt "%s" id
 let print_break fmt () = Format.fprintf fmt "@ "
@@ -70,11 +71,18 @@ let rec print_formula fmt = function
 
 let print_arg fmt = function
   | Ident id -> Format.fprintf fmt "%s" id
+  | UppIdent id -> Format.fprintf fmt "%s" id
   | Term t -> Format.fprintf fmt "%a" print_term t
   | Formula f -> Format.fprintf fmt "%a" print_formula f
 
-let print_decl fmt (id, n) =
-  Format.fprintf fmt "%s : %i" id n
+let print_s_type fmt = function
+  | Prefix n -> Format.fprintf fmt "%i" n
+  | Infix -> Format.fprintf fmt "infix"
+
+let print_decl fmt (id, t) =
+  Format.fprintf fmt "%s : %a"
+                 id
+                 print_s_type t
 
 let print_command fmt = function
   | Language (consts, funcs, rels) ->

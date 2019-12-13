@@ -37,10 +37,9 @@ let read_sentence () =
 
   loop ""
 
-let get_ctx = function
-    Init -> ([], ([], [], []))
-  | Running (l, Main gctx) | Running (l, WaitProof (gctx, _))
-  | Running (l, InProof (gctx, _, _)) -> (gctx, l)
+let get_language  = function
+    Init -> Language.empty
+  | Running (l, _) ->  l
 
 let rec loop ctx =
 
@@ -49,7 +48,7 @@ let rec loop ctx =
 
   begin
     try
-      let command = Parser.sentence (Lexer.token (get_ctx ctx)) lexbuf in
+      let command = Parser.sentence (Lexer.token (get_language ctx)) lexbuf in
 
       try
         let ctx = interpret ctx command in

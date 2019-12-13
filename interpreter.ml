@@ -16,13 +16,12 @@
 (******************************************************************************)
 
 open Ast
+open Language
 open Tactics
 
 type global_context = (ident * formula) list
 
 type goal = (ident * formula) list * formula
-
-type language = ident list * (ident * int) list * (ident * int) list
 
 (* Not cool at all *)
 
@@ -71,7 +70,7 @@ let interpret ctx cmd =
   | Init ->
      begin
        match cmd with
-       | Language (cl, fl, rl) -> Running ((cl, fl, rl), Main [])
+       | Language (cl, fl, rl) -> Running (lang_of_descr (cl, fl, rl), Main [])
        | _ -> context_error ()
      end
   | Running (l, ctx') ->

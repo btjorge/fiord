@@ -22,13 +22,21 @@ exception TacticError of string
 
 let tactic_error s = raise (TacticError s)
 
+let as_name = function
+  | Ident id -> id
+  | UppIdent id -> id
+  | Term _ -> tactic_error "not a name"
+  | Formula _ -> tactic_error "not a name"
+
 let as_term = function
   | Ident id -> Var id
+  | UppIdent _ -> tactic_error "not a term"
   | Term t -> t
   | Formula _ -> tactic_error "not a term"
 
 let as_formula = function
-  | Ident id -> FVar id
+  | Ident _ -> tactic_error "not a formula"
+  | UppIdent id -> FVar id
   | Term _ -> tactic_error "not a formula"
   | Formula f -> f
 
