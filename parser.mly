@@ -96,8 +96,10 @@ formula:
 | f = formula AND g = formula  { And (f, g) }
 | f = formula OR g = formula  { Or (f, g) }
 | f = formula ARROW g = formula  { Arrow (f, g) }
-| FORALL vars = list (IDENT) COMMA f = formula  { Forall (vars, f) }
-| EXISTS vars = list (IDENT) COMMA f = formula  { Exists (vars, f) }
+| FORALL vars = list (IDENT) COMMA f = formula
+    { List.fold_left (fun f v -> Forall (v, f)) f vars }
+| EXISTS vars = list (IDENT) COMMA f = formula
+    { List.fold_left (fun f v -> Exists (v, f)) f vars }
 
 atomic:
 | t1 = term EQUAL t2 = term  { Equal (t1, t2) }

@@ -37,8 +37,8 @@ type formula = False
              | And of formula * formula
              | Or of formula * formula
              | Arrow of formula * formula
-             | Forall of ident list * formula
-             | Exists of ident list * formula
+             | Forall of ident * formula
+             | Exists of ident * formula
 
 type argument = Ident of ident
               | UppIdent of ident

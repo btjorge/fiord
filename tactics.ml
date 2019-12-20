@@ -101,9 +101,7 @@ let interpret_tactic glob (hyp, f) = function
   | ("intro_forall", [Ident x]) ->
      begin
        match f with
-       | Forall ([], _) -> assert false (* Impossible by parsing *)
-       | Forall ([y], g) -> [(hyp, rename y x g)]
-       | Forall (y :: t, g) -> [(hyp, rename y x (Forall (t, g)))]
+       | Forall (y, g) -> [(hyp, rename y x g)]
        | _ -> tactic_error "wrong connector"
      end
 
@@ -111,9 +109,7 @@ let interpret_tactic glob (hyp, f) = function
      let t = as_term t in
      begin
        match f with
-       | Forall ([], _) -> assert false (* Impossible by parsing *)
-       | Forall ([x], g) -> [(hyp, substitute x t g)]
-       | Forall (x :: tl, g) -> [(hyp, substitute x t (Forall (tl, g)))]
+       | Forall (x, g) -> [(hyp, substitute x t g)]
        | _ -> tactic_error "wrong connector"
      end
 

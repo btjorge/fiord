@@ -59,14 +59,14 @@ let rec print_formula fmt = function
   | Arrow (f, g) -> Format.fprintf fmt "(%a@ ->@ %a)"
                                    print_formula f
                                    print_formula g
-  | Forall (vl, f) ->
-     Format.fprintf fmt "forall@ %a,@ %a"
-                    (print_sep_list print_ident print_break) vl
+  | Forall (v, f) ->
+     Format.fprintf fmt "forall@ %s,@ %a"
+                    v
                     print_formula f
 
-  | Exists (vl, f) ->
-     Format.fprintf fmt "exists@ %a,@ %a"
-                    (print_sep_list print_ident print_break) vl
+  | Exists (v, f) ->
+     Format.fprintf fmt "exists@ %s,@ %a"
+                    v
                     print_formula f
 
 let print_arg fmt = function
