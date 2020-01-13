@@ -42,7 +42,7 @@ let as_formula = function
 
 (* Inspecter correctement cette fonction. *)
 let interpret_tactic glob (hyp, f) = function
-  | ("intro_arrow", [Ident h]) ->
+  | ("intro_arrow", [UppIdent h]) ->
      begin
        match f with
        | Arrow (f, g) -> [((h, f) :: hyp, g)]
@@ -79,12 +79,12 @@ let interpret_tactic glob (hyp, f) = function
        | _ -> tactic_error "wrong connector"
      end
 
-  | ("elim_or", [Ident h; a; b]) -> (* même ident pour a et b ???? *)
+  | ("elim_or", [UppIdent h; a; b]) -> (* même ident pour a et b ???? *)
      let (a, b) = (as_formula a, as_formula b) in
 
      [(hyp, Or (a, b)); ((h, a)::hyp, f); ((h, b)::hyp, f)]
 
-  | ("intro_not", [Ident h]) ->
+  | ("intro_not", [UppIdent h]) ->
      begin
        match f with
        | Not g -> [((h, g)::hyp, False)]
@@ -99,21 +99,53 @@ let interpret_tactic glob (hyp, f) = function
      end
 
   | ("intro_forall", [Ident x]) ->
-     begin
-       match f with
-       | Forall (y, g) -> [(hyp, rename y x g)]
-       | _ -> tactic_error "wrong connector"
-     end
+     if StringSet.mem x (free_vars f)
+        || List.exists (fun (_, h) -> StringSet.mem x (free_vars h)) hyp
+     then tactic_error "invalid variable"
+     else
+       begin
+         match f with
+         | Forall (y, g) -> [(hyp, rename y x g)]
+         | _ -> tactic_error "wrong connector"
+       end
 
-  | ("elim_forall", [t]) ->
+  | ("elim_forall", [a; Ident x; t]) ->
+     let a = as_formula a in
      let t = as_term t in
+     if equal glob f (substitute x t a)
+     then [(hyp, Forall (x, a))]
+     else tactic_error "wrong argument"
+
+  | ("intro_exists",  [t]) ->
      begin
        match f with
-       | Forall (x, g) -> [(hyp, substitute x t g)]
+       | Exists (x, g) -> [(hyp, substitute x (as_term t) g)]
        | _ -> tactic_error "wrong connector"
      end
 
-  (* TODO : exists !! *)
+  | ("elim_exists", [g; Ident x; UppIdent h]) ->
+     if StringSet.mem x (free_vars f)
+        || List.exists (fun (_, h) -> StringSet.mem x (free_vars h)) hyp
+     then tactic_error "invalid variable"
+     else
+       let g = as_formula g in
+
+       [(hyp, Exists (x, g)); ((h, g)::hyp, f)]
+
+  | ("intro_equal", []) ->
+     begin
+       match f with
+       | Atomic (Equal (t1, t2)) when t1 = t2 -> []
+       | _ -> tactic_error "wrong connector"
+     end
+
+  | ("elim_equal", [a; Ident x; t; u]) ->
+     let a = as_formula a in
+     let t = as_term t in
+     let u = as_term u in
+     if equal glob f (substitute x u a)
+     then [(hyp, Atomic (Equal (t, u))); (hyp, substitute x t a)]
+     else tactic_error "TODO"
 
   | ("exact", [Ident h]) ->
      if List.mem (h, f) hyp || List.mem (h, f) glob then
