@@ -1,5 +1,5 @@
 (******************************************************************************)
-(*  Copyright 2019 Benjamin Terra-Jorge                                       *)
+(*  Copyright 2019-2020 Benjamin Terra-Jorge                                  *)
 (*                                                                            *)
 (*  Licensed under the Apache License, Version 2.0 (the "License");           *)
 (*  you may not use this file except in compliance with the License.          *)
@@ -100,47 +100,70 @@ let rec rename_unsafe x y = function
   | Exists (v, f) -> if v = x then Exists (v, f)
                      else Exists (v, rename_unsafe x y f)
 
-let rec substitute_term x t = function
+module StringMap = Map.Make (String)
+
+let rec substitute_term smap = function
   | Const c -> Const c
-  | Var v -> if v = x then t else Var v
-  | Func (id, tl) -> Func (id, List.map (substitute_term x t) tl)
+  | Var v ->
+     begin
+       match StringMap.find_opt v smap with
+       | None -> Var v
+       | Some t -> t
+     end
+  | Func (id, tl) -> Func (id, List.map (substitute_term smap) tl)
 
-let substitute_atomic x t = function
+let substitute_atomic smap = function
   | Equal (t1, t2) ->
-     Equal (substitute_term x t t1, substitute_term x t t2)
-  | Rel (id, tl) -> Rel (id, List.map (substitute_term x t) tl)
+     Equal (substitute_term smap t1, substitute_term smap t2)
+  | Rel (id, tl) -> Rel (id, List.map (substitute_term smap) tl)
 
-let substitute x t f =
-  let tvs = vars_term t in
+let substitute_map smap f =
+  let rec aux smap tvs used = function
+    | False -> False
+    | Atomic a -> Atomic (substitute_atomic smap a)
+    | FVar v -> FVar v
+    | Not f -> Not (aux smap tvs used f)
+    | And (f, g) -> And (aux smap tvs used f, aux smap tvs used g)
+    | Or (f, g) -> Or (aux smap tvs used f, aux smap tvs used g)
+    | Arrow (f, g) -> Arrow (aux smap tvs used f, aux smap tvs used g)
+
+    | Forall (v, f) ->
+       if StringSet.mem v tvs then
+         let v' = fresh_var used v in
+         let smap = StringMap.add v (Var v') smap in
+         let tvs = StringSet.add v' tvs in
+         let used = StringSet.add v' used in
+         Forall (v', aux smap tvs used f)
+       else
+         let smap = StringMap.remove v smap in
+         Forall (v, aux smap tvs used f)
+
+    | Exists (v, f) ->
+       if StringSet.mem v tvs then
+         let v' = fresh_var used v in
+         let smap = StringMap.add v (Var v') smap in
+         let tvs = StringSet.add v' tvs in
+         let used = StringSet.add v' used in
+         Exists (v', aux smap tvs used f)
+       else
+         let smap = StringMap.remove v smap in
+         Exists (v, aux smap tvs used f) in
+
+  let folder _ t tvs = StringSet.union tvs (vars_term t) in
+
+  let tvs = StringMap.fold folder smap StringSet.empty in
   let fvs = vars f in
   let used = StringSet.union tvs fvs in
 
-  let rec aux = function
-    | False -> False
-    | Atomic a -> Atomic (substitute_atomic x t a)
-    | FVar v -> FVar v
-    | Not f -> Not (aux f)
-    | And (f, g) -> And (aux f, aux g)
-    | Or (f, g) -> Or (aux f, aux g)
-    | Arrow (f, g) -> Arrow (aux f, aux g)
+  aux smap tvs used f
 
-    | Forall (v, f) ->
-       if v = x then Forall (v, f)
-       else if StringSet.mem v tvs then
-         let v' = fresh_var used v in
-         let f' = rename_unsafe v v' f in
-         Forall (v', aux f')
-       else Forall (v, aux f)
+let substitute_assoc slist f =
+  let folder smap (v, t) = StringMap.add v t smap in
+  let smap = List.fold_left folder StringMap.empty slist in
+  substitute_map smap f
 
-    | Exists (v, f) ->
-       if v = x then Exists (v, f)
-       else if StringSet.mem v tvs then
-         let v' = fresh_var used v in
-         let f' = rename_unsafe v v' f in
-         Exists (v', aux f')
-       else Exists (v, aux f)
-
-  in aux f
+let substitute x t f =
+  substitute_map (StringMap.singleton x t) f
 
 let rename x y f =
   substitute x (Var y) f
