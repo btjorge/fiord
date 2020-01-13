@@ -78,6 +78,56 @@ let rec vars = function
   | Forall (v, f) | Exists (v, f) -> StringSet.union (StringSet.singleton v)
                                                      (vars f)
 
+(* Y a sans doute plus efficace *)
+let closed f = StringSet.is_empty (free_vars f)
+
+let convertible conv v1 v2 =
+  List.exists (fun (x1,x2) -> (x1 = v1 && x2 = v2)||(x1 = v2 && x2 = v1)) conv
+
+let rec list_equal_custom equal l1 l2 =
+  match (l1, l2) with
+  | ([], []) -> true
+  | (h1::t1, h2::t2) -> equal h1 h2 && list_equal_custom equal t1 t2
+  | _ -> false
+
+let rec equal_term conv t1 t2 =
+  match (t1, t2) with
+  | (Const c1, Const c2) -> c1 = c2
+  | (Var v1, Var v2) -> v1 = v2 || convertible conv v1 v2
+  | (Func (f1, tl1), Func (f2, tl2)) ->
+     f1 = f2 && list_equal_custom (equal_term conv) tl1 tl2
+  | _ -> false
+
+let equal_atomic conv a1 a2 =
+  match (a1, a2) with
+  | (Equal (t1, t1'), Equal (t2, t2')) ->
+     equal_term conv t1 t2 && equal_term conv t1' t2'
+  | (Rel (r1, tl1), Rel (r2, tl2)) ->
+     r1 = r2 && list_equal_custom (equal_term conv) tl1 tl2
+  | _ -> false
+
+let rec equal_formula ctx conv f1 f2 =
+  match (f1, f2) with
+  | (False, False) -> true
+  | (Atomic a1, Atomic a2) -> equal_atomic conv a1 a2
+  | (FVar v1, FVar v2) -> v1 = v2
+  | (Not g1, Not g2) -> equal_formula ctx conv g1 g2
+  | (And (g1, g1'), And (g2, g2')) | (Or (g1, g1'), Or (g2, g2'))
+  | (Arrow (g1, g1'), Arrow (g2, g2')) ->
+     equal_formula ctx conv g1 g2 && equal_formula ctx conv g1' g2'
+  | (Forall (v1, f1), Forall (v2, f2))
+  | (Exists (v1, f1), Exists (v2, f2)) ->
+     equal_formula ctx ((v1, v2)::conv) f1 f2
+  | (FVar v, f) | (f, FVar v) ->
+     begin
+       match List.assoc_opt v ctx with
+       | None -> false
+       | Some g -> equal_formula ctx conv f g
+     end
+  | _ -> false
+
+let equal ctx f g = equal_formula ctx [] f g
+
 let rec rename_term x y = function
   | Const c -> Const c
   | Var v -> if v = x then Var y else Var v
