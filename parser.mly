@@ -97,9 +97,9 @@ formula:
 | f = formula OR g = formula  { Or (f, g) }
 | f = formula ARROW g = formula  { Arrow (f, g) }
 | FORALL vars = list (IDENT) COMMA f = formula
-    { List.fold_left (fun f v -> Forall (v, f)) f vars }
+    { List.fold_right (fun v f -> Forall (v, f)) vars f }
 | EXISTS vars = list (IDENT) COMMA f = formula
-    { List.fold_left (fun f v -> Exists (v, f)) f vars }
+    { List.fold_right (fun v f -> Exists (v, f)) vars f }
 
 atomic:
 | t1 = term EQUAL t2 = term  { Equal (t1, t2) }
@@ -113,6 +113,8 @@ term:
 
 not_id_term:
 | LPAREN t = term RPAREN  { t }
+| c = CONST  { Const c }
+| t1 = term op = BINOP t2 = term  { Func (op, [t1; t2]) }
 | func = FUNC args = nonempty_list (atomic_term)  { Func (func, args) }
 
 atomic_term: /* nom nul ! */
