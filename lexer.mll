@@ -41,7 +41,7 @@ let other = [ '+' '-' '*' '/' '^' '@' '$' '|' '&' '!' '?' '~' '<' '>' '=']
 let ident = lower (lower | upper | digit | '_') *
 let upper_ident = upper (lower | upper | digit | '_') * (* nom ? *)
 let number = digit +
-let symbol = (lower | upper | digit | other | '_') +
+let symbol = other +
 
 rule token lang = parse
 | [ ' ' '\t' '\n' '\r' ] { token lang lexbuf }
