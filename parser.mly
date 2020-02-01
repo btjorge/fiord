@@ -77,8 +77,8 @@ command: /* nom ??? */
 
 (* pour l'instant *)
 decl:
-| symb = SYMBOL COLON num = NUMBER  { (symb, Prefix (int_of_string num)) }
-| symb = SYMBOL COLON INFIX       { (symb, Infix) }
+| symb = symbol COLON num = NUMBER  { (symb, Prefix (int_of_string num)) }
+| symb = symbol COLON INFIX       { (symb, Infix) }
 
 argument:
 | id = IDENT  { Ident id }
