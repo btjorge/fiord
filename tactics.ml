@@ -112,7 +112,7 @@ let interpret_tactic glob (hyp, f) = function
   | ("elim_forall", [a; Ident x; t]) ->
      let a = as_formula a in
      let t = as_term t in
-     if equal (hyp @ glob) f (substitute x t a)
+     if equal [] f (substitute x t a)
      then [(hyp, Forall (x, a))]
      else tactic_error "wrong argument"
 
@@ -143,12 +143,12 @@ let interpret_tactic glob (hyp, f) = function
      let a = as_formula a in
      let t = as_term t in
      let u = as_term u in
-     if equal (hyp @ glob) f (substitute x u a)
+     if equal [] f (substitute x u a)
      then [(hyp, Atomic (Equal (t, u))); (hyp, substitute x t a)]
      else tactic_error "TODO"
 
   | ("exact", [UppIdent h]) ->
-     if equal (hyp @ glob) f (FVar h) then
+     if equal [] f (FVar h) then
        []
      else
        tactic_error "not an hypothesis"
