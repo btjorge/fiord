@@ -36,7 +36,7 @@ let as_term = function
 
 let as_formula = function
   | Ident _ -> tactic_error "not a formula"
-  | UppIdent id -> FVar id
+  | UppIdent id -> FVar (id, []) (* sûr ? *)
   | Term _ -> tactic_error "not a formula"
   | Formula f -> f
 
@@ -112,7 +112,7 @@ let interpret_tactic glob (hyps, f) = function
   | ("elim_forall", [a; Ident x; t]) ->
      let a = as_formula a in
      let t = as_term t in
-     if equal [] f (substitute x t a)
+     if equal glob f (substitute x t a)
      then [(hyps, Forall (x, a))]
      else tactic_error "wrong argument"
 
@@ -143,7 +143,7 @@ let interpret_tactic glob (hyps, f) = function
      let a = as_formula a in
      let t = as_term t in
      let u = as_term u in
-     if equal [] f (substitute x u a)
+     if equal glob f (substitute x u a)
      then [(hyps, Atomic (Equal (t, u))); (hyps, substitute x t a)]
      else tactic_error "TODO"
 
@@ -154,7 +154,7 @@ let interpret_tactic glob (hyps, f) = function
                  | Some a -> a
                  | None -> tactic_error "no such hypothesis" in
 
-     if equal [] f hyp then
+     if equal glob f hyp then
        []
      else
        tactic_error "hypothesis does not match the goal"

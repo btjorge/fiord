@@ -32,13 +32,15 @@ type atomic = Equal of term * term
 
 type formula = False
              | Atomic of atomic
-             | FVar of ident
+             | FVar of ident * term list
              | Not of formula
              | And of formula * formula
              | Or of formula * formula
              | Arrow of formula * formula
              | Forall of ident * formula
              | Exists of ident * formula
+
+type formula_def = formula * ident list
 
 type argument = Ident of ident
               | UppIdent of ident
@@ -48,6 +50,7 @@ type argument = Ident of ident
 type tactic = ident * argument list
 
 type command = Language of ident list * func_decl list * rel_decl list
+             | Definition of ident * formula_def
              | Axiom of ident * formula
              | Theorem of ident * formula
              | Proof

@@ -64,6 +64,7 @@ rule token lang = parse
 | ":="                   { DEFINED }
 | "infix"                { INFIX }
 | "Language"             { LANGUAGE }
+| "Definition"           { DEFINITION }
 | "Axiom"                { AXIOM }
 | "Theorem"              { THEOREM }
 | "Proof"                { PROOF }

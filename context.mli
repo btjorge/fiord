@@ -23,3 +23,6 @@ val empty : t
 
 val add_assertion : ident -> formula -> t -> t
 val get_assertion : ident -> t -> formula option
+
+val add_def : ident -> formula_def -> t -> t
+val get_def :  ident -> t -> formula_def option

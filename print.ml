@@ -48,7 +48,10 @@ let print_atomic fmt = function
 let rec print_formula fmt = function
   | False -> Format.fprintf fmt "false"
   | Atomic a -> print_atomic fmt a
-  | FVar v -> Format.fprintf fmt "%s" v
+  | FVar (v, []) -> Format.fprintf fmt "%s" v
+  | FVar (v, tl) -> Format.fprintf fmt "%s(%a)"
+                                   v
+                                   (print_sep_list print_term print_comma) tl
   | Not f -> Format.fprintf fmt "~%a" print_formula f
   | And (f, g) -> Format.fprintf fmt "(%a@ /\\@ %a)"
                                  print_formula f
@@ -84,12 +87,21 @@ let print_decl fmt (id, t) =
                  id
                  print_s_type t
 
+let print_fvs fmt fvs =
+  Format.fprintf fmt "(%a)"
+                 (print_sep_list print_ident print_comma) fvs
+
 let print_command fmt = function
   | Language (consts, funcs, rels) ->
      Format.fprintf fmt "@[Language : { %a }@ { %a }@ { %a }.@]@."
                     (print_sep_list print_ident print_comma) consts
                     (print_sep_list print_decl print_comma) funcs
                     (print_sep_list print_decl print_comma) rels
+  | Definition (id, (f, fvs)) ->
+     Format.fprintf fmt "@[Definition %s%a := %a.@]"
+                    id
+                    print_fvs fvs
+                    print_formula f
   | Axiom (id, f) ->
      Format.fprintf fmt "@[Axiom %s := %a.@]@."
                     id

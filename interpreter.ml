@@ -42,12 +42,13 @@ let interpret' ctx cmd =
        match cmd with
        | Axiom (id, f) -> Main (Context.add_assertion id f glob)
        | Theorem (id, f) -> WaitProof (glob, (id, f))
+       | Definition (id, fdef) -> Main (Context.add_def id fdef glob)
        | _ -> context_error ()
      end
   | WaitProof (glob, (id, f)) ->
      begin
        match cmd with
-         Proof -> InProof (glob, (id, f), [ ([], f) ])
+       | Proof -> InProof (glob, (id, f), [ ([], f) ])
        | _ -> context_error ()
      end
   | InProof (glob, (id, f), []) ->

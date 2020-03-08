@@ -81,53 +81,6 @@ let rec vars = function
 (* Y a sans doute plus efficace *)
 let closed f = StringSet.is_empty (free_vars f)
 
-let convertible conv v1 v2 =
-  List.exists (fun (x1,x2) -> (x1 = v1 && x2 = v2)||(x1 = v2 && x2 = v1)) conv
-
-let rec list_equal_custom equal l1 l2 =
-  match (l1, l2) with
-  | ([], []) -> true
-  | (h1::t1, h2::t2) -> equal h1 h2 && list_equal_custom equal t1 t2
-  | _ -> false
-
-let rec equal_term conv t1 t2 =
-  match (t1, t2) with
-  | (Const c1, Const c2) -> c1 = c2
-  | (Var v1, Var v2) -> v1 = v2 || convertible conv v1 v2
-  | (Func (f1, tl1), Func (f2, tl2)) ->
-     f1 = f2 && list_equal_custom (equal_term conv) tl1 tl2
-  | _ -> false
-
-let equal_atomic conv a1 a2 =
-  match (a1, a2) with
-  | (Equal (t1, t1'), Equal (t2, t2')) ->
-     equal_term conv t1 t2 && equal_term conv t1' t2'
-  | (Rel (r1, tl1), Rel (r2, tl2)) ->
-     r1 = r2 && list_equal_custom (equal_term conv) tl1 tl2
-  | _ -> false
-
-let rec equal_formula ctx conv f1 f2 =
-  match (f1, f2) with
-  | (False, False) -> true
-  | (Atomic a1, Atomic a2) -> equal_atomic conv a1 a2
-  | (FVar v1, FVar v2) -> v1 = v2
-  | (Not g1, Not g2) -> equal_formula ctx conv g1 g2
-  | (And (g1, g1'), And (g2, g2')) | (Or (g1, g1'), Or (g2, g2'))
-  | (Arrow (g1, g1'), Arrow (g2, g2')) ->
-     equal_formula ctx conv g1 g2 && equal_formula ctx conv g1' g2'
-  | (Forall (v1, f1), Forall (v2, f2))
-  | (Exists (v1, f1), Exists (v2, f2)) ->
-     equal_formula ctx ((v1, v2)::conv) f1 f2
-  | (FVar v, f) | (f, FVar v) ->
-     begin
-       match List.assoc_opt v ctx with
-       | None -> false
-       | Some g -> equal_formula ctx conv f g
-     end
-  | _ -> false
-
-let equal ctx f g = equal_formula ctx [] f g
-
 let rec rename_term x y = function
   | Const c -> Const c
   | Var v -> if v = x then Var y else Var v
@@ -140,7 +93,7 @@ let rename_atomic x y = function
 let rec rename_unsafe x y = function
   | False -> False
   | Atomic a -> Atomic (rename_atomic x y a)
-  | FVar v -> FVar v
+  | FVar (v, tl) -> FVar (v, List.map (rename_term x y) tl)
   | Not f -> Not (rename_unsafe x y f)
   | And (f, g) -> And (rename_unsafe x y f, rename_unsafe x y g)
   | Or (f, g) -> Or (rename_unsafe x y f, rename_unsafe x y g)
@@ -171,7 +124,7 @@ let substitute_map smap f =
   let rec aux smap tvs used = function
     | False -> False
     | Atomic a -> Atomic (substitute_atomic smap a)
-    | FVar v -> FVar v
+    | FVar (v, tl) -> FVar (v, List.map (substitute_term smap) tl)
     | Not f -> Not (aux smap tvs used f)
     | And (f, g) -> And (aux smap tvs used f, aux smap tvs used g)
     | Or (f, g) -> Or (aux smap tvs used f, aux smap tvs used g)
@@ -212,8 +165,54 @@ let substitute_assoc slist f =
   let smap = List.fold_left folder StringMap.empty slist in
   substitute_map smap f
 
+(* sûr ? *)
+let instantiate_def tl (f, vl) =
+  substitute_assoc (List.combine vl tl) f
+
 let substitute x t f =
   substitute_map (StringMap.singleton x t) f
 
 let rename x y f =
   substitute x (Var y) f
+
+let convertible conv v1 v2 =
+  List.exists (fun (x1,x2) -> (x1 = v1 && x2 = v2)||(x1 = v2 && x2 = v1)) conv
+
+let rec equal_term conv t1 t2 =
+  match (t1, t2) with
+  | (Const c1, Const c2) -> c1 = c2
+  | (Var v1, Var v2) -> v1 = v2 || convertible conv v1 v2
+  | (Func (f1, tl1), Func (f2, tl2)) ->
+     f1 = f2 && List.for_all2 (equal_term conv) tl1 tl2
+  | _ -> false
+
+let equal_atomic conv a1 a2 =
+  match (a1, a2) with
+  | (Equal (t1, t1'), Equal (t2, t2')) ->
+     equal_term conv t1 t2 && equal_term conv t1' t2'
+  | (Rel (r1, tl1), Rel (r2, tl2)) ->
+     r1 = r2 && List.for_all2 (equal_term conv) tl1 tl2
+  | _ -> false
+
+let rec equal_formula ctx conv f1 f2 =
+  match (f1, f2) with
+  | (False, False) -> true
+  | (Atomic a1, Atomic a2) -> equal_atomic conv a1 a2
+  | (FVar (v1, tl1), FVar (v2, tl2)) ->
+     v1 = v2 && List.for_all2 (equal_term conv) tl1 tl2
+  | (Not g1, Not g2) -> equal_formula ctx conv g1 g2
+  | (And (g1, g1'), And (g2, g2')) | (Or (g1, g1'), Or (g2, g2'))
+  | (Arrow (g1, g1'), Arrow (g2, g2')) ->
+     equal_formula ctx conv g1 g2 && equal_formula ctx conv g1' g2'
+  | (Forall (v1, f1), Forall (v2, f2))
+  | (Exists (v1, f1), Exists (v2, f2)) ->
+     equal_formula ctx ((v1, v2)::conv) f1 f2
+  | (FVar (v, tl), f) | (f, FVar (v, tl)) ->
+     begin
+       match Context.get_def v ctx with
+       | None -> false
+       | Some g -> equal_formula ctx conv f (instantiate_def tl g)
+     end
+  | _ -> false
+
+let equal ctx f g = equal_formula ctx [] f g

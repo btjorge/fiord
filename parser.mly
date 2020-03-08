@@ -32,7 +32,7 @@
 %token DOT
 %token DEFINED
 %token INFIX
-%token LANGUAGE AXIOM THEOREM PROOF QED
+%token LANGUAGE DEFINITION AXIOM THEOREM PROOF QED
 %token <string> BINOP BINREL
 %token <string> CONST FUNC REL
 %token <string> IDENT
@@ -62,7 +62,9 @@ command: /* nom ??? */
 | LANGUAGE COLON LBRACE consts = separated_list (COMMA, symbol) RBRACE
                  LBRACE funcs = separated_list (COMMA, decl) RBRACE
                  LBRACE rels = separated_list (COMMA, decl) RBRACE
-  { Language (consts, funcs, rels) }
+    { Language (consts, funcs, rels) }
+| DEFINITION id = UPPIDENT fvs = fv_binder DEFINED f = formula
+    { Definition (id, (f, fvs)) }
 | AXIOM id = UPPIDENT DEFINED f = formula  { Axiom (id, f) }
 | THEOREM id = UPPIDENT DEFINED f = formula  { Theorem (id, f) }
 | PROOF  { Proof }
@@ -74,6 +76,10 @@ command: /* nom ??? */
 | id = UPPIDENT  { id }
 | n = NUMBER  { n }
 | s = SYMBOL  { s }
+
+fv_binder:
+| { [] }
+| LPAREN vs = separated_list (COMMA, IDENT) RPAREN  { vs }
 
 (* pour l'instant *)
 decl:
@@ -90,7 +96,7 @@ argument:
 formula:
 | FALSE  { False }
 | a = atomic  { Atomic a }
-| id = UPPIDENT { FVar id }
+| id = UPPIDENT inst = instantiation  { FVar (id, inst) }
 | LPAREN f = formula RPAREN  { f }
 | NOT f = formula  { Not f }
 | f = formula AND g = formula  { And (f, g) }
@@ -100,6 +106,10 @@ formula:
     { List.fold_right (fun v f -> Forall (v, f)) vars f }
 | EXISTS vars = list (IDENT) COMMA f = formula
     { List.fold_right (fun v f -> Exists (v, f)) vars f }
+
+instantiation:
+|  { [] }
+| LPAREN vs = separated_list (COMMA, term) RPAREN  { vs }
 
 atomic:
 | t1 = term EQUAL t2 = term  { Equal (t1, t2) }

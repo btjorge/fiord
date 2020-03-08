@@ -17,12 +17,22 @@
 
 open Ast
 
-type t = (ident * formula) list
+type lexical_context = (ident * formula_def) list
 
-let empty = []
+type assertion_context = (ident * formula) list
 
-let add_assertion id f c =
-  (id, f) :: c
+type t = lexical_context * assertion_context
 
-let get_assertion id c =
-  List.assoc_opt id c
+let empty = ([], [])
+
+let add_assertion id f (lc, ac) =
+  (lc, (id, f) :: ac)
+
+let get_assertion id (_, ac) =
+  List.assoc_opt id ac
+
+let add_def id f (lc, ac) =
+  ((id, f) :: lc, ac)
+
+let get_def id (lc, _) =
+  List.assoc_opt id lc
