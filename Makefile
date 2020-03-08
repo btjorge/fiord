@@ -10,4 +10,4 @@ clean:
 	@rm -f .merlin
 
 headers:
-	@headache -h HEADER *.ml *.mll *.mly
+	@headache -h HEADER *.ml *.mli *.mll *.mly

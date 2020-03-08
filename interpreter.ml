@@ -19,15 +19,13 @@ open Ast
 open Language
 open Tactics
 
-type global_context = (ident * formula) list
-
 type goal = (ident * formula) list * formula
 
 (* Not cool at all *)
 
-type context' = Main of global_context
-              | WaitProof of global_context * (ident * formula)
-              | InProof of global_context * (ident * formula) * goal list
+type context' = Main of Context.t
+              | WaitProof of Context.t * (ident * formula)
+              | InProof of Context.t * (ident * formula) * goal list
 
 type context = Init
              | Running of language * context'
@@ -42,7 +40,7 @@ let interpret' ctx cmd =
   | Main glob ->
      begin
        match cmd with
-       | Axiom (id, f) -> Main ((id, f)::glob)
+       | Axiom (id, f) -> Main (Context.add_assertion id f glob)
        | Theorem (id, f) -> WaitProof (glob, (id, f))
        | _ -> context_error ()
      end
@@ -52,9 +50,9 @@ let interpret' ctx cmd =
          Proof -> InProof (glob, (id, f), [ ([], f) ])
        | _ -> context_error ()
      end
-  | InProof (glob, f, []) ->
+  | InProof (glob, (id, f), []) ->
      if cmd = Qed then
-       Main (f::glob)
+       Main (Context.add_assertion id f glob)
      else
        context_error ()
   | InProof (glob, f, goal :: tl) ->
@@ -70,7 +68,8 @@ let interpret ctx cmd =
   | Init ->
      begin
        match cmd with
-       | Language (cl, fl, rl) -> Running (lang_of_descr (cl, fl, rl), Main [])
+       | Language (cl, fl, rl) ->
+          Running (lang_of_descr (cl, fl, rl), Main Context.empty)
        | _ -> context_error ()
      end
   | Running (l, ctx') ->

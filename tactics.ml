@@ -41,71 +41,71 @@ let as_formula = function
   | Formula f -> f
 
 (* Inspecter correctement cette fonction. *)
-let interpret_tactic glob (hyp, f) = function
+let interpret_tactic glob (hyps, f) = function
   | ("intro_arrow", [UppIdent h]) ->
      begin
        match f with
-       | Arrow (f, g) -> [((h, f) :: hyp, g)]
+       | Arrow (f, g) -> [((h, f) :: hyps, g)]
        | _ -> tactic_error "wrong connector"
      end
 
   | ("elim_arrow", [g]) ->
-     [(hyp, Arrow (as_formula g, f)); (hyp, as_formula g)]
+     [(hyps, Arrow (as_formula g, f)); (hyps, as_formula g)]
 
   | ("intro_and", []) ->
      begin
        match f with
-       | And (g, h) -> [(hyp, g); (hyp, h)]
+       | And (g, h) -> [(hyps, g); (hyps, h)]
        | _ -> tactic_error "wrong connector"
      end
 
   | ("elim_and_left", [g]) ->
-     [(hyp, And (f, as_formula g))]
+     [(hyps, And (f, as_formula g))]
 
   | ("elim_and_right", [g]) ->
-     [(hyp, And (as_formula g, f))]
+     [(hyps, And (as_formula g, f))]
 
   | ("intro_or_left", []) ->
      begin
        match f with
-       | Or (g, _) -> [(hyp, g)]
+       | Or (g, _) -> [(hyps, g)]
        | _ -> tactic_error "wrong connector"
      end
 
   | ("intro_or_right", []) ->
      begin
        match f with
-       | Or (_, h) -> [(hyp, h)]
+       | Or (_, h) -> [(hyps, h)]
        | _ -> tactic_error "wrong connector"
      end
 
   | ("elim_or", [UppIdent h; a; b]) -> (* même ident pour a et b ???? *)
      let (a, b) = (as_formula a, as_formula b) in
 
-     [(hyp, Or (a, b)); ((h, a)::hyp, f); ((h, b)::hyp, f)]
+     [(hyps, Or (a, b)); ((h, a)::hyps, f); ((h, b)::hyps, f)]
 
   | ("intro_not", [UppIdent h]) ->
      begin
        match f with
-       | Not g -> [((h, g)::hyp, False)]
+       | Not g -> [((h, g)::hyps, False)]
        | _ -> tactic_error "wrong connector"
      end
 
   | ("elim_not", [g]) ->
      begin
        match f with
-       | False -> [(hyp, Not (as_formula g)); (hyp, as_formula g)]
+       | False -> [(hyps, Not (as_formula g)); (hyps, as_formula g)]
        | _ -> tactic_error "wrong connector"
      end
 
   | ("intro_forall", [Ident x]) ->
      if StringSet.mem x (free_vars f)
-        || List.exists (fun (_, h) -> StringSet.mem x (free_vars h)) hyp
+        || List.exists (fun (_, h) -> StringSet.mem x (free_vars h)) hyps
      then tactic_error "invalid variable"
      else
        begin
          match f with
-         | Forall (y, g) -> [(hyp, rename y x g)]
+         | Forall (y, g) -> [(hyps, rename y x g)]
          | _ -> tactic_error "wrong connector"
        end
 
@@ -113,24 +113,24 @@ let interpret_tactic glob (hyp, f) = function
      let a = as_formula a in
      let t = as_term t in
      if equal [] f (substitute x t a)
-     then [(hyp, Forall (x, a))]
+     then [(hyps, Forall (x, a))]
      else tactic_error "wrong argument"
 
   | ("intro_exists",  [t]) ->
      begin
        match f with
-       | Exists (x, g) -> [(hyp, substitute x (as_term t) g)]
+       | Exists (x, g) -> [(hyps, substitute x (as_term t) g)]
        | _ -> tactic_error "wrong connector"
      end
 
   | ("elim_exists", [g; Ident x; UppIdent h]) ->
      if StringSet.mem x (free_vars f)
-        || List.exists (fun (_, h) -> StringSet.mem x (free_vars h)) hyp
+        || List.exists (fun (_, h) -> StringSet.mem x (free_vars h)) hyps
      then tactic_error "invalid variable"
      else
        let g = as_formula g in
 
-       [(hyp, Exists (x, g)); ((h, g)::hyp, f)]
+       [(hyps, Exists (x, g)); ((h, g)::hyps, f)]
 
   | ("intro_equal", []) ->
      begin
@@ -144,12 +144,18 @@ let interpret_tactic glob (hyp, f) = function
      let t = as_term t in
      let u = as_term u in
      if equal [] f (substitute x u a)
-     then [(hyp, Atomic (Equal (t, u))); (hyp, substitute x t a)]
+     then [(hyps, Atomic (Equal (t, u))); (hyps, substitute x t a)]
      else tactic_error "TODO"
 
   | ("exact", [UppIdent h]) ->
-     if equal [] f (FVar h) then
+     let hyp = match List.assoc_opt h hyps with
+       | Some hyp -> hyp
+       | None -> match Context.get_assertion h glob with
+                 | Some a -> a
+                 | None -> tactic_error "no such hypothesis" in
+
+     if equal [] f hyp then
        []
      else
-       tactic_error "not an hypothesis"
+       tactic_error "hypothesis does not match the goal"
   | _ -> tactic_error "no such tactic"
