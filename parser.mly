@@ -114,7 +114,7 @@ instantiation:
 atomic:
 | t1 = term EQUAL t2 = term  { Equal (t1, t2) }
 | t1 = term r = BINREL t2 = term  { Rel (r, [t1; t2]) }
-| r = REL args = nonempty_list(atomic_term)  { Rel (r, args) }
+| r = REL args = list(atomic_term)  { Rel (r, args) }
 
 term:
 | st = atomic_term  { st }

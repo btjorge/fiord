@@ -41,6 +41,7 @@ let print_atomic fmt = function
   | Equal (t1, t2) -> Format.fprintf fmt "%a@ =@ %a"
                                      print_term t1
                                      print_term t2
+  | Rel (id, []) -> Format.fprintf fmt "%s" id
   | Rel (id, tl) -> Format.fprintf fmt "%s@ %a"
                                    id
                                    (print_sep_list print_term print_break) tl
