@@ -40,101 +40,109 @@ let as_formula = function
   | Term _ -> tactic_error "not a formula"
   | Formula f -> f
 
+let get_hypothesis glob hyps h =
+  match List.assoc_opt h hyps with
+  | Some hyp -> hyp
+  | None ->
+     match Context.get_assertion h glob with
+     | Some hyp -> hyp
+     | None -> tactic_error "no such hypothesis"
+
 (* Inspecter correctement cette fonction. *)
-let interpret_tactic glob (hyps, f) = function
+let interpret_tactic glob (hyps, goal) = function
   | ("intro_arrow", [UppIdent h]) ->
      begin
-       match f with
+       match goal with
        | Arrow (f, g) -> [((h, f) :: hyps, g)]
        | _ -> tactic_error "wrong connector"
      end
 
-  | ("elim_arrow", [g]) ->
-     [(hyps, Arrow (as_formula g, f)); (hyps, as_formula g)]
+  | ("elim_arrow", [f]) ->
+     [(hyps, Arrow (as_formula f, goal)); (hyps, as_formula f)]
 
   | ("intro_and", []) ->
      begin
-       match f with
-       | And (g, h) -> [(hyps, g); (hyps, h)]
+       match goal with
+       | And (f, g) -> [(hyps, f); (hyps, g)]
        | _ -> tactic_error "wrong connector"
      end
 
-  | ("elim_and_left", [g]) ->
-     [(hyps, And (f, as_formula g))]
+  | ("elim_and_left", [f]) ->
+     [(hyps, And (goal, as_formula f))]
 
-  | ("elim_and_right", [g]) ->
-     [(hyps, And (as_formula g, f))]
+  | ("elim_and_right", [f]) ->
+     [(hyps, And (as_formula f, goal))]
 
   | ("intro_or_left", []) ->
      begin
-       match f with
-       | Or (g, _) -> [(hyps, g)]
+       match goal with
+       | Or (f, _) -> [(hyps, f)]
        | _ -> tactic_error "wrong connector"
      end
 
   | ("intro_or_right", []) ->
      begin
-       match f with
-       | Or (_, h) -> [(hyps, h)]
+       match goal with
+       | Or (_, g) -> [(hyps, g)]
        | _ -> tactic_error "wrong connector"
      end
 
   | ("elim_or", [UppIdent h; a; b]) -> (* même ident pour a et b ???? *)
      let (a, b) = (as_formula a, as_formula b) in
 
-     [(hyps, Or (a, b)); ((h, a)::hyps, f); ((h, b)::hyps, f)]
+     [(hyps, Or (a, b)); ((h, a)::hyps, goal); ((h, b)::hyps, goal)]
 
   | ("intro_not", [UppIdent h]) ->
      begin
-       match f with
+       match goal with
        | Not g -> [((h, g)::hyps, False)]
        | _ -> tactic_error "wrong connector"
      end
 
-  | ("elim_not", [g]) ->
+  | ("elim_not", [f]) ->
      begin
-       match f with
-       | False -> [(hyps, Not (as_formula g)); (hyps, as_formula g)]
+       match goal with
+       | False -> [(hyps, Not (as_formula f)); (hyps, as_formula f)]
        | _ -> tactic_error "wrong connector"
      end
 
   | ("intro_forall", [Ident x]) ->
-     if StringSet.mem x (free_vars f)
+     if StringSet.mem x (free_vars goal)
         || List.exists (fun (_, h) -> StringSet.mem x (free_vars h)) hyps
      then tactic_error "invalid variable"
      else
        begin
-         match f with
-         | Forall (y, g) -> [(hyps, rename y x g)]
+         match goal with
+         | Forall (y, f) -> [(hyps, rename y x f)]
          | _ -> tactic_error "wrong connector"
        end
 
   | ("elim_forall", [a; Ident x; t]) ->
      let a = as_formula a in
      let t = as_term t in
-     if equal glob f (substitute x t a)
+     if equal glob goal (substitute x t a)
      then [(hyps, Forall (x, a))]
      else tactic_error "wrong argument"
 
   | ("intro_exists",  [t]) ->
      begin
-       match f with
-       | Exists (x, g) -> [(hyps, substitute x (as_term t) g)]
+       match goal with
+       | Exists (x, f) -> [(hyps, substitute x (as_term t) f)]
        | _ -> tactic_error "wrong connector"
      end
 
-  | ("elim_exists", [g; Ident x; UppIdent h]) ->
-     if StringSet.mem x (free_vars f)
+  | ("elim_exists", [f; Ident x; UppIdent h]) ->
+     if StringSet.mem x (free_vars goal)
         || List.exists (fun (_, h) -> StringSet.mem x (free_vars h)) hyps
      then tactic_error "invalid variable"
      else
-       let g = as_formula g in
+       let f = as_formula f in
 
-       [(hyps, Exists (x, g)); ((h, g)::hyps, f)]
+       [(hyps, Exists (x, f)); ((h, f)::hyps, goal)]
 
   | ("intro_equal", []) ->
      begin
-       match f with
+       match goal with
        | Atomic (Equal (t1, t2)) when t1 = t2 -> []
        | _ -> tactic_error "wrong connector"
      end
@@ -143,19 +151,43 @@ let interpret_tactic glob (hyps, f) = function
      let a = as_formula a in
      let t = as_term t in
      let u = as_term u in
-     if equal glob f (substitute x u a)
+     if equal glob goal (substitute x u a)
      then [(hyps, Atomic (Equal (t, u))); (hyps, substitute x t a)]
      else tactic_error "TODO"
 
   | ("exact", [UppIdent h]) ->
-     let hyp = match List.assoc_opt h hyps with
-       | Some hyp -> hyp
-       | None -> match Context.get_assertion h glob with
-                 | Some a -> a
-                 | None -> tactic_error "no such hypothesis" in
+     let hyp = get_hypothesis glob hyps h in
 
-     if equal glob f hyp then
+     if equal glob goal hyp then
        []
      else
        tactic_error "hypothesis does not match the goal"
+
+  | ("apply", [UppIdent h]) ->
+
+     let rec concls hyps f =
+       (f, hyps) :: match f with
+                    | And (g, h) -> concls hyps g @ concls hyps h
+                    | Arrow (g, h) -> concls (g::hyps) h
+                    | _ -> [] in
+
+     let hyp = get_hypothesis glob hyps h in
+
+     begin
+       match List.assoc_opt goal (concls [] hyp) with
+       | None -> tactic_error "not a consequence"
+       | Some hys -> List.map (fun hy -> (hyps, hy)) hys
+     end
+
+  | ("specialize", [UppIdent h; UppIdent h1; t]) ->
+
+     let t = as_term t in
+     let hyp = get_hypothesis glob hyps h in
+
+     begin
+       match hyp with
+       | Forall (x, g) -> [((h1, substitute x t g) :: hyps, goal)]
+       | _ -> tactic_error "expect an forall hypothesis"
+     end
+
   | _ -> tactic_error "no such tactic"
