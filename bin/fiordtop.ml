@@ -15,8 +15,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Tactics
-open Interpreter
+open Fiord.Tactics
+open Fiord.Interpreter
 open Print
 
 let read_sentence () =
@@ -38,7 +38,7 @@ let read_sentence () =
   loop ""
 
 let get_language  = function
-    Init -> Language.empty
+    Init -> Fiord.Language.empty
   | Running (l, _) ->  l
 
 let rec loop ctx =

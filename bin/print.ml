@@ -15,8 +15,8 @@
 (*                                                                            *)
 (******************************************************************************)
 
-open Ast
-open Language
+open Fiord.Ast
+open Fiord.Language
 
 let print_ident fmt id = Format.fprintf fmt "%s" id
 let print_break fmt () = Format.fprintf fmt "@ "

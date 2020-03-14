@@ -16,8 +16,8 @@
 /******************************************************************************/
 
 %{
-    open Ast
-    open Language
+    open Fiord.Ast
+    open Fiord.Language
 %}
 
 /*%token EOF*/
@@ -48,7 +48,7 @@
 
 %left BINOP
 
-%start <Ast.command> sentence
+%start <Fiord.Ast.command> sentence
 
 %%
 

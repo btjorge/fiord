@@ -17,12 +17,12 @@
 
 {
   open Parser
-  open Language
+  open Fiord.Language
 
   exception End_of_input
 
   let choose default lang (id : string) =
-    match Language.get_type lang id with
+    match Fiord.Language.get_type lang id with
     | None -> default id
     | Some st ->
        match st with
