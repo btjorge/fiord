@@ -51,6 +51,7 @@ rule token lang = parse
 | "/\\"                  { AND }
 | "\\/"                  { OR }
 | "->"                   { ARROW } (* IMPLIES ? *)
+| "<->"                  { EQUIV }
 | "exists"               { EXISTS }
 | "forall"               { FORALL }
 | "false"                { FALSE }

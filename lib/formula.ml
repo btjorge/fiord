@@ -65,16 +65,16 @@ let rec free_vars = function
   | False | FVar _ -> StringSet.empty
   | Atomic a -> vars_atomic a
   | Not f -> free_vars f
-  | And (f, g) | Or (f, g)
-  | Arrow (f, g) -> StringSet.union (free_vars f) (free_vars g)
+  | And (f, g) | Or (f, g) | Arrow (f, g)
+    | Equiv (f, g) -> StringSet.union (free_vars f) (free_vars g)
   | Forall (v, f) | Exists (v, f) -> StringSet.remove v (free_vars f)
 
 let rec vars = function
   | False | FVar _ -> StringSet.empty
   | Atomic a -> vars_atomic a
   | Not f -> vars f
-  | And (f, g) | Or (f, g)
-  | Arrow (f, g) -> StringSet.union (vars f) (vars g)
+  | And (f, g) | Or (f, g) | Arrow (f, g)
+    | Equiv (f, g) -> StringSet.union (vars f) (vars g)
   | Forall (v, f) | Exists (v, f) -> StringSet.union (StringSet.singleton v)
                                                      (vars f)
 
@@ -98,6 +98,7 @@ let rec rename_unsafe x y = function
   | And (f, g) -> And (rename_unsafe x y f, rename_unsafe x y g)
   | Or (f, g) -> Or (rename_unsafe x y f, rename_unsafe x y g)
   | Arrow (f, g) -> Arrow (rename_unsafe x y f, rename_unsafe x y g)
+  | Equiv (f, g) -> Equiv (rename_unsafe x y f, rename_unsafe x y g)
   | Forall (v, f) -> if v = x then Forall (v, f)
                      else Forall (v, rename_unsafe x y f)
   | Exists (v, f) -> if v = x then Exists (v, f)
@@ -129,6 +130,7 @@ let substitute_map smap f =
     | And (f, g) -> And (aux smap tvs used f, aux smap tvs used g)
     | Or (f, g) -> Or (aux smap tvs used f, aux smap tvs used g)
     | Arrow (f, g) -> Arrow (aux smap tvs used f, aux smap tvs used g)
+    | Equiv (f, g) -> Equiv (aux smap tvs used f, aux smap tvs used g)
 
     | Forall (v, f) ->
        if StringSet.mem v tvs then
@@ -202,7 +204,7 @@ let rec equal_formula ctx conv f1 f2 =
      v1 = v2 && List.for_all2 (equal_term conv) tl1 tl2
   | (Not g1, Not g2) -> equal_formula ctx conv g1 g2
   | (And (g1, g1'), And (g2, g2')) | (Or (g1, g1'), Or (g2, g2'))
-  | (Arrow (g1, g1'), Arrow (g2, g2')) ->
+  | (Arrow (g1, g1'), Arrow (g2, g2')) | (Equiv (g1, g1'), Equiv (g2, g2')) ->
      equal_formula ctx conv g1 g2 && equal_formula ctx conv g1' g2'
   | (Forall (v1, f1), Forall (v2, f2))
   | (Exists (v1, f1), Exists (v2, f2)) ->

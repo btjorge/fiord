@@ -163,12 +163,26 @@ let interpret_tactic glob (hyps, goal) = function
      else
        tactic_error "hypothesis does not match the goal"
 
+  | ("intro_equiv", [UppIdent h]) -> (* même ident pour les deux hyps ? *)
+     begin
+       match goal with
+       | Equiv (f, g) -> [((h, f)::hyps, g); ((h, g)::hyps, f)]
+       | _ -> tactic_error "wrong connector"
+     end
+
+  | ("elim_equiv_left", [f]) ->
+     [(hyps, Equiv (as_formula f, goal)); (hyps, as_formula f)]
+
+  | ("elim_equiv_right", [g]) ->
+     [(hyps, Equiv (goal, as_formula g)); (hyps, as_formula g)]
+
   | ("apply", [UppIdent h]) ->
 
      let rec concls hyps f =
        (f, hyps) :: match f with
                     | And (g, h) -> concls hyps g @ concls hyps h
                     | Arrow (g, h) -> concls (g::hyps) h
+                    | Equiv (g, h) -> concls (g::hyps) h @ concls (h::hyps) g
                     | _ -> [] in
 
      let hyp = get_hypothesis glob hyps h in

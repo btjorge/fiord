@@ -37,6 +37,7 @@ type formula = False
              | And of formula * formula
              | Or of formula * formula
              | Arrow of formula * formula
+             | Equiv of formula * formula
              | Forall of ident * formula
              | Exists of ident * formula
 

@@ -22,7 +22,7 @@
 
 /*%token EOF*/
 %token EQUAL
-%token NOT AND OR ARROW /* IMPLIES ? */
+%token NOT AND OR ARROW /* IMPLIES ? */ EQUIV
 %token EXISTS FORALL
 %token FALSE
 %token COMMA
@@ -42,6 +42,7 @@
 
 %nonassoc COMMA /* pour les quantificateurs */
 %right ARROW
+%left EQUIV
 %left AND
 %left OR
 %nonassoc NOT
@@ -102,6 +103,7 @@ formula:
 | f = formula AND g = formula  { And (f, g) }
 | f = formula OR g = formula  { Or (f, g) }
 | f = formula ARROW g = formula  { Arrow (f, g) }
+| f = formula EQUIV g = formula  { Equiv (f, g) }
 | FORALL vars = list (IDENT) COMMA f = formula
     { List.fold_right (fun v f -> Forall (v, f)) vars f }
 | EXISTS vars = list (IDENT) COMMA f = formula

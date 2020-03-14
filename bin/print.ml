@@ -63,6 +63,9 @@ let rec print_formula fmt = function
   | Arrow (f, g) -> Format.fprintf fmt "(%a@ ->@ %a)"
                                    print_formula f
                                    print_formula g
+  | Equiv (f, g) -> Format.fprintf fmt "(%a@ <->@ %a)"
+                                   print_formula f
+                                   print_formula g
   | Forall (v, f) ->
      Format.fprintf fmt "forall@ %s,@ %a"
                     v
