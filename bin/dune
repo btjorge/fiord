@@ -1,5 +1,5 @@
-(executable
- (name fiordtop)
+(executables
+ (names fiordtop fiordcheck)
  (libraries fiord))
 
 (ocamllex lexer)

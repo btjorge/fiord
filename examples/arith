@@ -1,0 +1,110 @@
+Language : { 0 } { S : 1, + : infix } { }.
+
+Axiom Add_0 := forall x, x + 0 = x.
+
+Axiom Add_S := forall x y, x + S y = S (x + y).
+
+Axiom Rec_Add_0_l :=
+  0 + 0 = 0 -> (forall x, 0 + x = x -> 0 + S x = S x) -> forall x, 0 + x = x.
+
+Theorem Add_0_l := forall x, 0 + x = x.
+Proof.
+  apply Rec_Add_0_l.
+    intro_forall x.
+    intro_arrow H.
+    elim_equal (0 + S x = S u) u (0 + x) x.
+      exact H.
+
+      elim_equal (0 + S x = u) u (0 + S x) (S (0 + x)).
+        specialize Add_S Add_S_0 (0).
+        specialize Add_S_0 Add_S_0_x x.
+        exact Add_S_0_x.
+
+        intro_equal.
+
+    specialize Add_0 Add_0_0 (0).
+    exact Add_0_0.
+Qed.
+
+Axiom Rec_Add_S_l := forall x,
+  S x + 0 = S (x + 0) ->
+  (forall y, S x + y = S (x + y) -> S x + S y = S (x + S y))
+  -> forall y, S x + y = S (x + y).
+
+Theorem Add_S_l_0 := forall x, S x + 0 = S (x + 0).
+Proof.
+  intro_forall x.
+  elim_equal (S x + 0 = S u) u x (x + 0).
+    symmetry.
+    specialize Add_0 Add_0_x x.
+    exact Add_0_x.
+
+    elim_equal (u = S x) u (S x) (S x + 0).
+      symmetry.
+      specialize Add_0 Add_0_Sx (S x).
+      exact Add_0_Sx.
+
+      intro_equal.
+Qed.
+
+Theorem Add_S_l := forall x y, S x + y = S (x + y).
+Proof.
+  intro_forall x.
+  specialize Rec_Add_S_l Rec_Add_S_l_x x.
+  apply Rec_Add_S_l_x.
+    intro_forall y.
+    intro_arrow H.
+    elim_equal (S x + S y = S u) u (S (x + y)) (x + S y).
+      symmetry.
+      specialize Add_S Add_S_x x.
+      specialize Add_S_x Add_S_x_y y.
+      exact Add_S_x_y.
+
+      elim_equal (S x + S y = S u) u (S x + y) (S (x + y)).
+        exact H.
+
+        specialize Add_S Add_S_Sx (S x).
+        specialize Add_S_Sx Add_S_Sx_y y.
+        exact Add_S_Sx_y.
+
+        specialize Add_S_l_0 Add_S_l_0_x x.
+        exact Add_S_l_0_x.
+Qed.
+
+Axiom Rec_Add_commute := forall x,
+  x + 0 = 0 + x ->
+  (forall y, x + y = y + x -> x + S y = S y + x) ->
+  forall y, x + y = y + x.
+
+Theorem Add_commute := forall x y, x + y = y + x.
+Proof.
+  intro_forall x.
+  specialize Rec_Add_commute Rec_Add_commute_x x.
+  apply Rec_Add_commute_x.
+    intro_forall y.
+    intro_arrow H.
+    elim_equal (u = S y + x) u (S (x + y)) (x + S y).
+      symmetry.
+      specialize Add_S Add_S_x x.
+      specialize Add_S_x Add_S_x_y y.
+      exact Add_S_x_y.
+
+      elim_equal (S (x + y) = u) u (S (y + x)) (S y + x).
+        symmetry.
+        specialize Add_S_l Add_S_l_y y.
+        specialize Add_S_l_y Add_S_l_y_x x.
+        exact Add_S_l_y_x.
+
+        elim_equal (S (x + y) = S u) u (x + y) (y + x).
+          exact H.
+
+          intro_equal.
+
+    elim_equal (x + 0 = u) u x (0 + x).
+      symmetry.
+      specialize Add_0_l Add_0_l_x x.
+      exact Add_0_l_x.
+
+      specialize Add_0 Add_0_x x.
+      exact Add_0_x.
+Qed.

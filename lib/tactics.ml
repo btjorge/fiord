@@ -140,10 +140,17 @@ let interpret_tactic glob (hyps, goal) = function
 
        [(hyps, Exists (x, f)); ((h, f)::hyps, goal)]
 
-  | ("intro_equal", []) ->
+  | (("intro_equal" | "reflexivity"), []) ->
      begin
        match goal with
        | Atomic (Equal (t1, t2)) when t1 = t2 -> []
+       | _ -> tactic_error "wrong connector"
+     end
+
+  | ("symmetry", []) ->
+     begin
+       match goal with
+       | Atomic (Equal (t1, t2)) -> [(hyps, Atomic (Equal (t2, t1)))]
        | _ -> tactic_error "wrong connector"
      end
 

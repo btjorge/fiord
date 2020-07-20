@@ -20,7 +20,7 @@
     open Fiord.Language
 %}
 
-/*%token EOF*/
+%token EOF
 %token EQUAL
 %token NOT AND OR ARROW /* IMPLIES ? */ EQUIV
 %token EXISTS FORALL
@@ -49,12 +49,15 @@
 
 %left BINOP
 
-%start <Fiord.Ast.command> sentence
+%type <Fiord.Ast.command> sentence
+%type <Fiord.Ast.program> program
+
+%start program sentence
 
 %%
 
-/*program:
-| prog = list (sentence) EOF  { prog }*/
+program:
+| prog = list (sentence) EOF  { prog }
 
 sentence:
 | c = command DOT  { c }

@@ -19,8 +19,6 @@
   open Parser
   open Fiord.Language
 
-  exception End_of_input
-
   let choose default lang (id : string) =
     match Fiord.Language.get_type lang id with
     | None -> default id
@@ -75,7 +73,7 @@ rule token lang = parse
 | number as num          { choose (fun x -> NUMBER x) lang num }
 | number as num "%int"   { NUMBER num }
 | symbol as symb         { choose (fun x -> SYMBOL x) lang symb }
-| eof                    { raise End_of_input }
+| eof                    { EOF }
 | _ as c                 { print_string "unexpected char: ";
                            print_char c;
                            print_newline ();
