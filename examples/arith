@@ -15,12 +15,9 @@ Proof.
     elim_equal (0 + S x = S u) u (0 + x) x.
       exact H.
 
-      elim_equal (0 + S x = u) u (0 + S x) (S (0 + x)).
-        specialize Add_S Add_S_0 (0).
-        specialize Add_S_0 Add_S_0_x x.
-        exact Add_S_0_x.
-
-        intro_equal.
+      specialize Add_S Add_S_0 (0).
+      specialize Add_S_0 Add_S_0_x x.
+      exact Add_S_0_x.
 
     specialize Add_0 Add_0_0 (0).
     exact Add_0_0.
