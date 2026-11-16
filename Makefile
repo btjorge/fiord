@@ -1,4 +1,4 @@
-.PHONY: clean headers main
+.PHONY: clean headers switch main
 
 main:
 	@dune build bin/fiordtop.exe bin/fiordcheck.exe
@@ -12,3 +12,6 @@ clean:
 
 headers:
 	@headache -h HEADER lib/*.ml lib/*.mli bin/*.ml bin/*.mll bin/*.mly
+
+switch:
+	opam switch create . --deps-only

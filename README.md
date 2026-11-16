@@ -1,13 +1,23 @@
+# Fiord
+
 Fiord is a toy proof checker for FIrst ORDer logic using natural deduction.
 
 It allows to write theorems and proofs in a language similar to Coq vernacular.
 
-Using make, one can build two executables :
+## Build
+
+With [opam](https://opam.ocaml.org/) installed and initialized (`opam init`),
+you can run `make switch` to build a development environment under `./_opam`
+
+Using `make`, one can build two executables :
   - fiordtop is a very simple toplevel for the language.
   - fiordcheck FILE checks the proofs contained in FILE.
+## Examples
 
-One example Fiord program is contained in examples/arith, and prooves the
+One example Fiord program is contained in examples/arith, and proves the
 commutativity of addition from Peano axioms.
+
+## Project Structure
 
 The lib/ directory contains the logic of the program:
   - lib/ast.ml defines most of the types and the AST of the language.
